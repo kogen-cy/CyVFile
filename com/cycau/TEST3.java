@@ -4,7 +4,7 @@ package com.cycau;
 import java.util.List;
 import java.util.Random;
 
-import com.cycau.jiyufs.core.CyVFile;
+import com.cycau.core.CyVFile;
 
 public class TEST3 {
 
