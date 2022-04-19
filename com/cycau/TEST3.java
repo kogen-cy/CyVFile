@@ -10,11 +10,11 @@ public class TEST3 {
 
 	public static void main(String[] args) {
 		test1("C:\\temp\\tset.cyv");
-		test2("C:\\temp\\tset.cyv");
+		test2("C:\\temp\\tset.00005.cyv");
 	}
 	private static void test1(String filePath) {
-		CyVFile cyv = new CyVFile(filePath, false);
-		for (int idx=0; idx<1; idx++) {
+		CyVFile cyv = new CyVFile(filePath, 1);
+		for (int idx=0; idx<10000; idx++) {
 			cyv.write(makeData());
 		}
 		cyv.close();
