@@ -67,6 +67,42 @@ public class CyVFile {
 			throw new RuntimeException(e);
 		}
 	}
+	/**
+	 * @param outputPath
+	 * @param append
+	 * @param maxFileSize 1MB unit
+	 * @param endOfLine
+	 */
+	private String fileName;
+	private String fileExt;
+	private short fileNum = 0;
+	private int MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+	private int wroteLen = 0;
+	public CyVFile(String outputPath, int maxFileSize, String... endOfLine) {
+		try {
+			this.BUFF = new byte[DEFAULT_ROW_LENGTH];
+			if (maxFileSize > 0) {
+				this.MAX_FILE_SIZE = maxFileSize * 1024 * 1024; // maxFileSize * 1MB
+				int posDot = outputPath.lastIndexOf(".");
+				int posSlash = outputPath.lastIndexOf("/");
+				if (posDot > 0 && posDot > posSlash) {
+					this.fileName = outputPath.substring(0, posDot);
+					this.fileExt = outputPath.substring(posDot);
+				} else {
+					this.fileName = outputPath;
+					this.fileExt = "";
+				}
+				this.fileNum = 1;
+			}
+			this.fo = new FileOutputStream(fileName + ".00000" + fileExt);
+			if (endOfLine.length > 0) {
+				this.END_OF_LINE = endOfLine[0].getBytes();
+			}
+			startTime = System.currentTimeMillis();
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+	}
 	
 	private int BUFF_POS = -1;
 	private int BUFF_LEN = 0;
@@ -222,52 +258,63 @@ public class CyVFile {
 		if (columns == null) return null;
 
 		int pos = 0;
-		try {
-			for (int idx=0; idx<columns.length; idx++) {
-				// nullの場合は空扱い
-				if (columns[idx] == null) {
-					this.BUFF[pos++] = LEN2CHAR[0];
-					continue;
-				}
-
-				byte[] src = convByte(columns[idx]);
-				// 短い項目の場合は、書き込むのみ
-				if (src.length <= MAX_COLUMN_LENGHT) {
-					this.BUFF[pos++] = LEN2CHAR[src.length];
-					this.BUFF = writeByte(src,0, BUFF, pos, src.length);
-					pos += src.length;
-					continue;
-				}
-
-				// 長い項目は分割して書き込む
-				int writeLen = 0;
-				int leftLen = src.length;
-				while (leftLen > 0) {
-					writeLen = leftLen;
-					if (writeLen > MAX_COLUMN_LENGHT) {
-						writeLen = MAX_COLUMN_LENGHT+1;
-						//マルチバイトの２バイト以降の場合
-						while((src[src.length - leftLen + writeLen] & 0xC0) == 0x80) {
-							writeLen++;
-						}
-					}
-					this.BUFF[pos++] = LEN2CHAR[writeLen];
-					this.BUFF = writeByte(src, src.length - leftLen, BUFF, pos, writeLen);
-					pos += writeLen;
-					leftLen -= writeLen;
-				}
-				if (writeLen > MAX_COLUMN_LENGHT) {
-					this.BUFF[pos++] = LEN2CHAR[0];
-				}
+		for (int idx=0; idx<columns.length; idx++) {
+			// nullの場合は空扱い
+			if (columns[idx] == null) {
+				this.BUFF[pos++] = LEN2CHAR[0];
+				continue;
 			}
-			this.BUFF = writeByte(END_OF_LINE, 0, BUFF, pos, END_OF_LINE.length);
-			pos += END_OF_LINE.length;
-			this.BUFF[pos++] = '\n';
+
+			byte[] src = convByte(columns[idx]);
+			// 短い項目の場合は、書き込むのみ
+			if (src.length <= MAX_COLUMN_LENGHT) {
+				this.BUFF[pos++] = LEN2CHAR[src.length];
+				this.BUFF = writeByte(src,0, BUFF, pos, src.length);
+				pos += src.length;
+				continue;
+			}
+
+			// 長い項目は分割して書き込む
+			int writeLen = 0;
+			int leftLen = src.length;
+			while (leftLen > 0) {
+				writeLen = leftLen;
+				if (writeLen > MAX_COLUMN_LENGHT) {
+					writeLen = MAX_COLUMN_LENGHT+1;
+					//マルチバイトの２バイト以降の場合
+					while((src[src.length - leftLen + writeLen] & 0xC0) == 0x80) {
+						writeLen++;
+					}
+				}
+				this.BUFF[pos++] = LEN2CHAR[writeLen];
+				this.BUFF = writeByte(src, src.length - leftLen, BUFF, pos, writeLen);
+				pos += writeLen;
+				leftLen -= writeLen;
+			}
+			if (writeLen > MAX_COLUMN_LENGHT) {
+				this.BUFF[pos++] = LEN2CHAR[0];
+			}
+		}
+		this.BUFF = writeByte(END_OF_LINE, 0, BUFF, pos, END_OF_LINE.length);
+		pos += END_OF_LINE.length;
+		this.BUFF[pos++] = '\n';
+		try {
 			fo.write(this.BUFF, 0, pos);
 			ROW_CNT++;
+			if (fileNum > 0) {
+				wroteLen += pos;
+				if (wroteLen > MAX_FILE_SIZE) {
+					fo.close();
+					this.fo = new FileOutputStream(fileName + "." + String.format("%05d", fileNum) + fileExt);
+					System.out.printf("CyVFile wrote count [%,3d]\n", ROW_CNT);
+					wroteLen = 0;
+					fileNum++;
+				}
+			}
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+
 		return this;
 	}
 	private byte[] convByte(Object coldata) {
