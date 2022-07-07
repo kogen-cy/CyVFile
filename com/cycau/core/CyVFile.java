@@ -18,6 +18,9 @@ import java.util.List;
  * 項目長さ：[0-9A-Za-z] MAX:61
  * 長項目の続き（文章）： p～continue　0 end
  * デフォルト行の終わり： ;`\n
+ *
+ * CSV: "a","ab","abc","1234567890123456789012345678901234567890123456789012345678"
+ * CyV: 1a2ab3abcp12345678901234567890123456789012345678901234567890172345678;`
  */
 public class CyVFile {
 //	private final char SPLIT = '`';
