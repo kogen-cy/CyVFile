@@ -16,7 +16,7 @@ import java.util.List;
  * 
  * 目的：　I)整合性保証、II)CSVのエスケープによる負担軽減
  * 項目長さ：[0-9A-Za-z] MAX:61
- * 長項目の続き（文章）： p～
+ * 長項目の続き（文章）： p～continue　0 end
  * デフォルト行の終わり： ;`\n
  */
 public class CyVFile {
@@ -291,6 +291,7 @@ public class CyVFile {
 				pos += writeLen;
 				leftLen -= writeLen;
 			}
+			// マルチバイトで終わった場合、読み込み判断用に強制的に0長さ付与
 			if (writeLen > MAX_COLUMN_LENGHT) {
 				this.BUFF[pos++] = LEN2CHAR[0];
 			}
